@@ -2,9 +2,9 @@
 
 A field for Symphony managing single or multiple dates as well as date ranges.
 
-- Version: 1.3
-- Date: 15th January 2010
-- Requirements: Symphony CMS 2.0.6 or newer, <http://github.com/symphony/symphony-2/tree/master>
+- Version: 1.4dev
+- Date: **UNRELEASED**
+- Requirements: Symphony CMS 2.0.7 or newer, <http://github.com/symphony/symphony-2/tree/master>
 - Author: Nils Hörrmann, post@nilshoerrmann.de
 - Constributors: [A list of contributors can be found in the commit history](http://github.com/nilshoerrmann/datetime/commits/master)
 - GitHub Repository: <http://github.com/nilshoerrmann/datetime>
@@ -16,6 +16,10 @@ This extension is based on and inspired by Scott Hughes' [calendar mock-up](http
 Using this extension in conjunction with the **Localisation Manager** and setting the language of an author to something else but system standard **may break the Date and Time field**. For some reasons yet to be fully understood the calendar will show all dates as 01 January 1970. _Changing the author’s language back to system standard will fix this issue._
 
 ## Change log
+
+**Version 1.4**
+
+_Yet to be released._
 
 **Version 1.3**
 
