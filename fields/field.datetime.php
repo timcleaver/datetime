@@ -245,7 +245,7 @@ Class fieldDatetime extends Field {
     function processRawFieldData($data, &$status, $simulate=false, $entry_id=NULL) {
 
         $status = self::__OK__;
-        if(!is_array($data) or empty($data)) return NULL;
+        if(!is_array($data) or empty($data['start'][0])) return NULL;
 
         // Replace relative and locale date and time strings
         $english = array(
