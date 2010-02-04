@@ -18,7 +18,6 @@
 			// language
 			if(Calendar.settings == undefined) Calendar.settings = eval('(' + _input.filter(':hidden').val() + ')');
 			// init
-			if(Calendar.settings.multiple == 'no') _field.find('a.new').remove();
 			Calendar.create(_label);
 			Calendar.toggleInput(_label, 0);
 			_input.filter(':not(:hidden)').each(function() {
