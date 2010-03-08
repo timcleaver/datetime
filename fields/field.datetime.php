@@ -12,7 +12,6 @@ Class fieldDatetime extends Field {
     /**
      * Initialize Datetime as unrequired field.
      */
-
     function __construct(&$parent) {
         parent::__construct($parent);
         $this->_name = __('Date/Time');
@@ -20,41 +19,51 @@ Class fieldDatetime extends Field {
     }
 
     /**
-     * Allow data source filtering.
+	 * Allow data source filtering.
+	 *
+	 * @return boolean
+	 *	true
      */
-
     function canFilter() {
         return true;
     }
 
     /**
-     * Allow data source sorting.
+	 * Allow data source sorting.
+	 *
+	 * @return boolean
+	 *	true.
      */
-
     function isSortable() {
         return true;
     }
 
     /**
-     * Allow prepopulation of other fields.
+	 * Allow prepopulation of other fields.
+	 *
+	 * @return boolean
+	 *	true.
      */
-
     function canPrePopulate() {
         return false;
     }
 
     /**
-     * Allow data source output grouping.
+	 * Allow data source output grouping.
+	 *
+	 * @return boolean
+	 *	true.
      */
-
     function allowDatasourceOutputGrouping() {
         return true;
     }
 
     /**
-     * Allow data source parameter output.
+	 * Allow data source parameter output.
+	 *
+	 * @return boolean
+	 *	true.
      */
-
     function allowDatasourceParamOutput() {
         return true;
     }
@@ -62,10 +71,11 @@ Class fieldDatetime extends Field {
     /**
      * Displays setting panel in section editor.
      *
-     * @param XMLElement $wrapper - parent element wrapping the field
-     * @param array $errors - array with field errors, $errors['name-of-field-element']
+	 * @param XMLElement $wrapper -
+	 *	parent element wrapping the field
+	 * @param array $errors
+	 *	array with field errors, $errors['name-of-field-element']
      */
-
     function displaySettingsPanel(&$wrapper, $errors=NULL) {
 
         // initialize field settings based on class defaults (name, placement)
@@ -100,24 +110,13 @@ Class fieldDatetime extends Field {
     }
 
     /**
-     * Checks fields for errors in section editor.
-     *
-     * @param array $errors
-     * @param boolean $checkForDuplicates
+	 * Save fields settings in section editor. Rather than execute an update
+	 * this uses delete and insert.
+	 *
+	 * @return boolean
+	 *	true if the commit was successful, false otherwise.
      */
-
-    function checkFields(&$errors, $checkForDuplicates=true) {
-
-        parent::checkFields($errors, $checkForDuplicates);
-
-    }
-
-    /**
-     * Save fields settings in section editor.
-     */
-
     function commit() {
-
         // prepare commit
         if(!parent::commit()) return false;
         $id = $this->get('id');
@@ -132,36 +131,70 @@ Class fieldDatetime extends Field {
         $fields['allow_multiple_dates'] = ($this->get('allow_multiple_dates') ? $this->get('allow_multiple_dates') : 'no');
 
         // delete old field settings
-        Administration::instance()->Database->query(
+		Symphony::Database()->query(
             "DELETE FROM `tbl_fields_".$this->handle()."` WHERE `field_id` = '$id' LIMIT 1"
         );
 
         // save new field setting
-        return Administration::instance()->Database->insert($fields, 'tbl_fields_' . $this->handle());
+        return Symphony::Database()->insert($fields, 'tbl_fields_' . $this->handle());
+	}
 
-    }
-
-    /**
-     * Displays publish panel in content area.
-     *
-     * @param XMLElement $wrapper
-     * @param $data
-     * @param $flagWithError
-     * @param $fieldnamePrefix
-     * @param $fieldnamePostfix
-     */
-
-    function displayPublishPanel(&$wrapper, $data=NULL, $flagWithError=NULL, $fieldnamePrefix=NULL, $fieldnamePostfix=NULL) {
-
+	/**
+	 * Add the required header information to the page.
+	 */
+	protected function addHeader() {
         Administration::instance()->Page->addScriptToHead(URL . '/extensions/datetime/assets/jquery-ui.js', 100, true);
         Administration::instance()->Page->addScriptToHead(URL . '/extensions/datetime/assets/datetime.js', 201, false);
         Administration::instance()->Page->addStylesheetToHead(URL . '/extensions/datetime/assets/datetime.css', 'screen', 202, false);
+	}
 
-        // title and help
+	/**
+	 * Add the title and the help to the panel.
+	 *
+	 * @param XMLElement &$wrapper
+	 *	the parent element of the xml document to add this to.
+	 */
+	protected function addTitle(&$wrapper) {
         $wrapper->setValue($this->get('label') . '<i>' . __('Press <code>alt</code> to add a range') . '</i>');
+	}
 
-        // settings
-        $fieldname = 'fields['  .$this->get('element_name') . ']';
+	/**
+	 * Conditionally add the create new link to the display panel depending on
+	 * whether this supports the addition of multiple dates.
+	 *
+	 * @param XMLElement &$wrapper
+	 *	the display panel widget to conditionally append the new link to.
+	 * @return XMLElement
+	 *	the new link xml element added or null if none was added.
+	 */
+	protected function addPublishNewLink(&$wrapper) {
+		if($this->get('allow_multiple_dates') == 'yes') {
+			$output = new XMLElement('a', __('Add new date'), array('class' => 'new'));
+			$wrapper->appendChild($output);
+			return $output;
+		}
+		return null;
+	}
+
+	/**
+	 * Accessor to the field name of this.
+	 *
+	 * @return string
+	 *	the field name of this.
+	 */
+	protected function getFieldName() {
+		return 'fields['  .$this->get('element_name') . ']';
+	}
+
+	/**
+	 * Add the settings to the input parent xml element.
+	 *
+	 * @param XMLElement &$wrapper
+	 *	the xml element to add this to.
+	 * @return XMLElement
+	 *	the xml element that was appended to the parent.
+	 */
+	protected function addPublishSettings(&$wrapper) {
         $setting = array(
             'DATE' => __('date'),
             'FROM' => __('from'),
@@ -170,78 +203,178 @@ Class fieldDatetime extends Field {
             'FORMAT' => $this->get('format'),
             'multiple' => $this->get('allow_multiple_dates'),
             'prepopulate' => $this->get('prepopulate')
-        );
-        $settings = Widget::Input($fieldname . '[settings]', str_replace('"', "'", json_encode($setting)), 'hidden');
+		);
+		$output = Widget::Input($this->getFieldName() . '[settings]', str_replace('"', "'", json_encode($setting)), 'hidden');
+		$wrapper->appendChild($output);
+		return $output;
+	}
 
-        // default setup
-        if($data == NULL) {
-            $label = Widget::Label(NULL, NULL, 'first last');
+	/**
+	 * Add the label to the output by appending it to the input wrapper
+	 * xml element. The construction of the label is dependent on the input form
+	 * data.
+	 *
+	 * @param XMLElement &$wrapper
+	 *	the xml element to append this to.
+	 * @param array[string]string data
+	 *	the submitted form data.
+	 * @param number $index
+	 *	the number of labels added thus far
+	 * @return XMLElement
+	 *	the label xml element added.
+	 */
+	protected function addPublishLabel(&$wrapper, $data, $index) {
+		$label = null;
+		if($data == null) {
+			$label = Widget::Label(NULL, NULL, 'first last');
+		} else {
+			$label = Widget::Label();
+			$class = "";
+			if ($index == 1) {
+				$class .= 'first';
+			}
+			if ($index == count($data['start'])) {
+				$class .= ' last';
+			}
+			$label->setAttribute('class', $class);
+		}
+		$wrapper->appendChild($label);
+		return $label;
+	}
 
-            $span = new XMLElement('span', '<em>' . __('from') . '</em>', array('class' => 'start'));
-            $span->appendChild(
-                Widget::Input($fieldname . '[start][]', '', 'text')
-            );
-            $span->appendChild(
-                new XMLElement('a', 'delete', array('class' => 'delete'))
-            );
-            $label->appendChild($span);
+	/**
+	 * Make sure that the start and end elements of the data array are themselves
+	 * arrays provided the input data itself isn't null. The input data array is
+	 * changed in place.
+	 *
+	 * @param array $data
+	 *	the data to clean
+	 */
+	protected function ensureArrayValues($data) {
+		if($data == null) {
+			return;
+		}
+		if(!is_array($data['start'])) $data['start'] = array($data['start']);
+		if(!is_array($data['end'])) $data['end'] = array($data['end']);
+	}
 
-            $span = new XMLElement('span', '<em>' . __('to') . '</em>', array('class' => 'end'));
-            $span->appendChild(
-                Widget::Input($fieldname . '[end][]', '', 'text')
-            );
-            $label->appendChild($span);
+	/**
+	 * Add the start entry to the input xml element. Construct the start entry
+	 * given the input form data and the current index into that data.
+	 *
+	 * @param XMLElement &$wrapper
+	 *	the xml element to append the start entry to.
+	 * @param array $data
+	 *	the form data with which to construct the sart entry.
+	 * @param number $index
+	 *	the current start index.
+	 * @return
+	 *	the constructed start xml widget.
+	 */
+	protected function addPublishStart(&$wrapper, $data, $index) {
+		$start = new XMLElement('span', null, array('class' => 'start'));
+		$start->appendChild(new XMLElement('em', __('from'), array()));
+		$start->appendChild(Widget::Input($this->getFieldName() . '[start][]', is_array($data['start']) ? $data['start'][$index - 1] : $data['start'], 'text'));
+		$this->addPublishDelete($start);
+		$wrapper->appendChild($start);
+		return $start;
+	}
 
-            $label->appendChild($settings);
-            $wrapper->appendChild($label);
-        } else {
-            if(!is_array($data['start'])) $data['start'] = array($data['start']);
-            if(!is_array($data['end'])) $data['end'] = array($data['end']);
+	/**
+	 * Add the start entry to the input xml element. Construct the start entry
+	 * given the input form data and the current index into that data.
+	 *
+	 * @param XMLElement &$wrapper
+	 *	the xml element to append the start entry to.
+	 * @param array $data
+	 *	the form data with which to construct the sart entry.
+	 * @param number $index
+	 *	the current start index.
+	 * @return
+	 *	the constructed start xml widget.
+	 */
+	protected function addPublishEnd(&$wrapper, $data, $index) {
+		$end = new XMLElement('span', null, array('class' => 'end'));
+		$end->appendChild(new XMLElement('em', __('to'), array()));
+		if($data != null and isset($data['end']) and is_array($data['start'])) {
+			// handle multiply set date-times in input data
+			$end->appendChild(Widget::Input($this->getFieldName() . '[end][]', ($data['end'][$index - 1] == '0000-00-00 00:00:00') ? '' : $data['end'][$index - 1], 'text'));
+		} elseif($data != null and isset($data['end'])) {
+			// handle a single data-time in input data
+			$end->appendChild(Widget::Input($this->getFieldName() . '[end][]', ($data['end'] == '0000-00-00 00:00:00') ? '' : $data['end'], 'text'));
+		} else {
+			// handle no date-times in input data
+			$end->appendChild(Widget::Input($this->getFieldName() . '[end][]', '', 'text'));
+		}
+		$wrapper->appendChild($end);
+		return $end;
+	}
 
-			$count = count($data['start']);
-            for($i = 1; $i <= $count; $i++) {
-                $label = Widget::Label();
+	/**
+	 * Add the delete link to the input xml element.
+	 *
+	 * @param XMLElement &$wrapper
+	 *	the xml element to append the start entry to.
+	 * @return XMLELement
+	 *	the constructed XMLElement.
+	 */
+	protected function addPublishDelete(&$wrapper) {
+		$delete = new XMLElement('a', 'delete', array('class' => 'delete'));
+		$wrapper->appendChild($delete);
+		return $delete;
+	}
 
-                if($i == 1 && $i != $count) {
-                    $label->setAttribute('class', 'first');
-                } else if($i == 1 && $i == $count) {
-                    $label->setAttribute('class', 'first last');
-                } else if($i != 1 && $i == $count) {
-                    $label->setAttribute('class', 'last');
-                }
+    /**
+	 * Displays publish panel in content area by appending the html elements
+	 * to the input xml element and adding any css and js dependencies to the
+	 * header of the page.
+     *
+	 * @param XMLElement $wrapper
+	 *	the parent XMLElement to add the content of this to.
+	 * @param array[string]string $data (optional)
+	 *	the post data if any. this defaults to null.
+	 * @param mixed $flagWithError (optional)
+	 *	??
+	 * @param string $fieldnamePrefix (optional)
+	 *	the prefix to prepend to the name of this field for display. defaults
+	 *	to null.
+	 * @param string $fieldnameSuffix (optional)
+	 *	the suffix to append to the name of this field for display. defaults
+	 *	to null.
+     */
+	function displayPublishPanel(&$wrapper, $data=NULL, $flagWithError=NULL, $fieldnamePrefix=NULL, $fieldnameSuffix=NULL) {
+		$this->addHeader();
+		$this->addTitle($wrapper);
+		$this->ensureArrayValues($data);
 
-                $span = new XMLElement('span', '<em>' . __('from') . '</em>', array('class' => 'start'));
-                $span->appendChild(
-                    Widget::Input($fieldname . '[start][]', $data['start'][$i - 1], 'text')
-                );
-                $span->appendChild(
-                    new XMLElement('a', 'delete', array('class' => 'delete'))
-                );
-                $label->appendChild($span);
-
-                $span = new XMLElement('span', '<em>' . __('to') . '</em>', array('class' => 'end'));
-                $span->appendChild(
-                    Widget::Input($fieldname . '[end][]', ($data['end'][$i - 1] == '0000-00-00 00:00:00') ? '' : $data['end'][$i - 1], 'text')
-                );
-                $label->appendChild($span);
-
-                if($i == 1) $label->appendChild($settings);
-                $wrapper->appendChild($label);
-            }
-        }
-
-        // add new
-        if($this->get('allow_multiple_dates') == 'yes') {
-            $wrapper->appendChild(
-				new XMLElement('a', __('Add new date'), array('class' => 'new'))
-			);
-        }
+		$count = 1;
+		do {
+			$label = $this->addPublishLabel($wrapper, $data, $count);
+			$this->addPublishStart($label, $data, $count);
+			$this->addPublishEnd($label, $data, $count);
+			$this->addPublishSettings($label, $count);
+		} while($data != null && $count++ < count($data['start']));
+		$this->addPublishNewLink($wrapper);
     }
 
     /**
-     * Prepares field values for database.
+	 * Prepares field values for database. This create an multidimensional
+	 * array structure. The keys in the top-level array are the column
+	 * names. The values are each an array of values for that column.
+	 *
+	 * @param array $data
+	 *	the form input data to process.
+	 * @param mixed $status
+	 *	the status to return from this function.
+	 * @param boolean $simulate (optional)
+	 *	true if the processing should be simulated, false otherwise. this
+	 *	defaults to false and is ignored in this particular implementation.
+	 * @param mixed $entry_id (optional)
+	 *	the id of the entry in the database to make.
+	 * @return array[string]
+	 *	the processed data as an array structured appropriately for insertion
+	 *	into the database.
      */
-
     function processRawFieldData($data, &$status, $simulate=false, $entry_id=NULL) {
 
         $status = self::__OK__;
@@ -274,33 +407,36 @@ Class fieldDatetime extends Field {
     }
 
     /**
-     * Creates database field table.
+	 * Creates database field table.
+	 *
+	 * @return boolean
+	 *	true if the creation was successful, false otherwise.
      */
-
     function createTable() {
-
-        return Administration::instance()->Database->query(
+        return Symphony::Database()->query(
             "CREATE TABLE IF NOT EXISTS `tbl_entries_data_" . $this->get('id') . "` (
-            `id` int(11) unsigned NOT NULL auto_increment,
-            `entry_id` int(11) unsigned NOT NULL,
-            `start` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-            `end` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				`id` int(11) unsigned NOT NULL auto_increment,
+				`entry_id` int(11) unsigned NOT NULL,
+				`start` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				`end` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
             PRIMARY KEY (`id`),
             KEY `entry_id` (`entry_id`)
             );"
         );
-
     }
 
     /**
      * Prepare value for the content overview table.
      *
-     * @param array $data
-     * @param XMLElement $link
+	 * @param array $data
+	 *	the input form fata.
+	 * @param XMLElement $link (optional)
+	 *	the link to instantiate if this is in the first column. this defaults
+	 *	to null.
+	 * @return string|XMLElement
+	 *	either this represented as a string, or an XMLElement.
      */
-
     function prepareTableValue($data, XMLElement $link=NULL) {
-
         $value = '';
         if(!is_array($data['start'])) $data['start'] = array($data['start']);
         if(!is_array($data['end'])) $data['end'] = array($data['end']);
@@ -327,8 +463,7 @@ Class fieldDatetime extends Field {
                 $value .= DateTimeObj::get(__SYM_DATETIME_FORMAT__, strtotime($data['start'][$id]));
             }
         }
-        return $value;
-
+        return parent::prepareTableValue(array('value' => $value), $link);
     }
 
     /**
@@ -339,7 +474,6 @@ Class fieldDatetime extends Field {
      * @param string $sort
      * @param string $order
      */
-
     function buildSortingSQL(&$joins, &$where, &$sort, $order='ASC') {
         $joins .= "LEFT OUTER JOIN `tbl_entries_data_".$this->get('id')."` AS `dt` ON (`e`.`id` = `dt`.`entry_id`) ";
         $sort = 'ORDER BY ' . (in_array(strtolower($order), array('random', 'rand')) ? 'RAND()' : "`dt`.`start` $order");
@@ -353,7 +487,6 @@ Class fieldDatetime extends Field {
      * @param string $where
      * @param boolean $andOperation
      */
-
     function buildDSRetrivalSQL($data, &$joins, &$where, $andOperation = false) {
 
         if(self::isFilterRegex($data[0])) return parent::buildDSRetrivalSQL($data, $joins, $where, $andOperation);
@@ -391,7 +524,6 @@ Class fieldDatetime extends Field {
      * @param string $where
      * @param boolean $andOperation
      */
-
     protected function __buildSimpleFilterSQL($data, &$joins, &$where, $andOperation = false) {
 
         $field_id = $this->get('id');
@@ -418,7 +550,6 @@ Class fieldDatetime extends Field {
      * @param string $where
      * @param boolean $andOperation
      */
-
     protected function __buildRangeFilterSQL($data, &$joins, &$where, $andOperation=false) {
 
         $field_id = $this->get('id');
@@ -446,13 +577,10 @@ Class fieldDatetime extends Field {
      *
      * @param string $string
      */
-
     protected static function __cleanFilterString($string) {
-
         $string = trim($string);
         $string = trim($string, '-/');
         return $string;
-
     }
 
     /**
@@ -461,7 +589,6 @@ Class fieldDatetime extends Field {
      *
      * @param string $string
      */
-
     protected static function __parseFilter(&$string) {
 
         $string = self::__cleanFilterString($string);
@@ -596,66 +723,156 @@ Class fieldDatetime extends Field {
         // return calendar groups
         return $groups;
 
-    }
+	}
+
+	/**
+	 * Add a formatted time element to the input xml element.
+	 *
+	 * @param XMLElement $wrapper
+	 *	the xml element to append the formatted time element to.
+	 * @param string $name
+	 *	the name of the xml element.
+	 * @param int $time
+	 *	the timestamp formatted data for the current entry.
+	 * @return XMLElement
+	 *	the constructed time element.
+	 */
+	protected function addFormattedTime(&$wrapper, $name, $time) {
+		$element = new XMLElement($name, DateTimeObj::get('Y-m-d', $time), array(
+							'iso' => DateTimeObj::get('c', $time),
+							'time' => DateTimeObj::get('H:i', $time),
+							'weekday' => DateTimeObj::get('w', $time),
+							'offset' => DateTimeObj::get('O', $time)
+						)
+					);
+		$wrapper->appendChild($element);
+		return $element;
+	}
+
+	/**
+	 * Add a formatted date-time element to the input xml element.
+	 *
+	 * @param XMLElement $wrapper
+	 *	the xml element to append the formatted date element to.
+	 *	data from the input data
+	 * @param number $index
+	 *	the index of the current entry
+	 * @param array $entry
+	 *	the start and end entry array.
+	 * @return XMLElement
+	 *	the constructed date element.
+	 */
+	protected function addFormattedDateTime(&$wrapper, $index, $entry) {
+        $date = new XMLElement('date');
+		$date->setAttribute('timeline', $index);
+		// set the default atrtribute type to exact
+		$date->setAttribute('type', 'exact');
+		$this->addFormattedTime($date, 'start', strtotime($entry['start']));
+        if($entry['end'] != "0000-00-00 00:00:00") {
+			$this->addTime($date, 'end', strtotime($entry['end']));
+			// over write the default type as this is a range.
+			$date->setAttribute('type', 'range');
+		}
+		$wrapper->appendChild($date);
+		return $date;
+	}
+
+	/**
+	 * Transform the input data array structure. The default output of symphony is an
+	 * array of column names with a row number indexed array of values for that
+	 * column. We transform this structure into an array of entries, each entry
+	 * being an array of that associates the column name to its data. For example,
+	 * if the structure in the database is:
+	 * +----+----------+---------------------+---------------------+
+	 * | id | entry_id | start               | end                 |
+	 * +----+----------+---------------------+---------------------+
+	 * | 30 |        8 | 2010-08-03 10:52:00 | 0000-00-00 00:00:00 |
+	 * | 29 |        8 | 2010-08-27 10:50:00 | 0000-00-00 00:00:00 |
+	 * | 28 |        8 | 2010-05-03 14:37:00 | 2010-05-21 14:38:00 |
+	 * | 27 |        8 | 2010-03-05 14:33:00 | 0000-00-00 00:00:00 |
+	 * +----+----------+---------------------+---------------------+
+	 * symphony would return:
+	 * array
+	 *  'start' => 
+	 *    array
+	 *      0 => string '2010-03-05 14:33:00' (length=19)
+	 *      1 => string '2010-05-03 14:37:00' (length=19)
+	 *      2 => string '2010-08-27 10:50:00' (length=19)
+	 *      3 => string '2010-08-03 10:52:00' (length=19)
+	 *  'end' => 
+	 *    array
+	 *      0 => string '0000-00-00 00:00:00' (length=19)
+	 *      1 => string '2010-05-21 14:38:00' (length=19)
+	 *      2 => string '0000-00-00 00:00:00' (length=19)
+	 *      3 => string '0000-00-00 00:00:00' (length=19)
+	 * however, because we wish to output the above in order of start time
+	 * and there is no separate concept of array position aside from index
+	 * in php we cannot do so. therefore we transform the above into:
+	 * array
+	 *	0 => 
+	 *    array
+	 *		'start' => string '2010-03-05 14:33:00' (length=19)
+	 *		'end' => string '0000-00-00 00:00:00' (length=19)
+	 *	1 =>
+	 *	  array
+	 *		'start' => string '2010-05-03 14:37:00' (length=19)
+	 *		'end' => string '2010-05-21 14:38:00' (length=19)
+	 *	2
+	 *	  array
+	 *		'start' => string '2010-08-03 10:52:00' (length=19)
+	 *		'end'  => string '0000-00-00 00:00:00' (length=19)
+	 *	3
+	 *    array
+	 *		'start' => string '2010-08-27 10:50:00' (length=19)
+	 *		'end' => string '0000-00-00 00:00:00' (length=19)
+	 *	which is in start time order.
+	 *
+	 * @param array $data
+	 *	the data to transform.
+	 * @return array
+	 *	the transformed array.
+	 */
+	protected function toEntryArray($data) {
+		$result = array();
+		// iterate over the entries
+		foreach($data['start'] as $id => $date) {
+			// iterate over the key types
+			$entry = array();
+			foreach($data as $key => $value) {
+				$entry[$key] = $data[$key][$id];
+			}
+			$result[$id] = $entry;
+		}
+		// create an anonymous sort function that compares the arrays based on their
+		// start value. in php 5.3 create_function wouldn't be necessary. use usort and not
+		// uasort as we want the indeces to change. use strtotime to ensure that the
+		// comparison is not based on teh string representation.
+		usort($result, create_function('$a, $b', 'return strtotime($a[\'start\']) - strtotime($b[\'start\']);'));
+		return $result;
+	}
 
     /**
-     * Generate data source output.
+	 * Generate data source output. Given a simple array structure that maps columns
+	 * to arrays of their values, construct the xml output of this field.
      *
-     * @param XMLElement $wrapper
-     * @param array $data
-     * @param boolean $encode
-     * @param string $mode
+	 * @param XMLElement $wrapper
+	 *	the xml element to append the formatted output to.
+	 * @param array $data
+	 *	the array structure returned from the database for this instance.
+	 * @param boolean $encode (optional)
+	 *	true if this should be html encoded, false otherwise.
      */
+	public function appendFormattedElement(&$wrapper, $data, $encode=false) {
+		$this->ensureArrayValues($data);
+		$datetime = new XMLElement($this->get('element_name'));
+		$transformed = $this->toEntryArray($data);
 
-    public function appendFormattedElement(&$wrapper, $data, $encode = false) {
-
-        // create date and time element
-        $datetime = new XMLElement($this->get('element_name'));
-
-        // get timeline
-        if(!is_array($data['start'])) $data['start'] = array($data['start']);
-        if(!is_array($data['end'])) $data['end'] = array($data['end']);
-        $timeline = $data['start'];
-        sort($timeline);
-
-        // generate XML
-        foreach($data['start'] as $id => $date) {
-            if(empty($date)) continue;
-            $date = new XMLElement('date');
-            $date->setAttribute('timeline', array_search($data['start'][$id], $timeline) + 1);
-            $timestamp = strtotime($data['start'][$id]);
-            $date->appendChild(
-                $start = new XMLElement('start', DateTimeObj::get('Y-m-d', $timestamp), array(
-                        'iso' => DateTimeObj::get('c', strtotime($data['start'][$id])),
-                        'time' => DateTimeObj::get('H:i', $timestamp),
-                        'weekday' => DateTimeObj::get('w', $timestamp),
-                        'offset' => DateTimeObj::get('O', $timestamp)
-                    )
-                )
-            );
-
-            if($data['end'][$id] != "0000-00-00 00:00:00") {
-                $timestamp = strtotime($data['end'][$id]);
-
-                $date->appendChild(
-                    $end = new XMLElement('end', DateTimeObj::get('Y-m-d', $timestamp), array(
-                            'iso' => DateTimeObj::get('c', strtotime($data['end'][$id])),
-                            'time' => DateTimeObj::get('H:i', $timestamp),
-                            'weekday' => DateTimeObj::get('w', $timestamp),
-                            'offset' => DateTimeObj::get('O', $timestamp)
-                        )
-                    )
-                );
-                $date->setAttribute('type', 'range');
-            } else {
-                $date->setAttribute('type', 'exact');
-            }
-            $datetime->appendChild($date);
-        }
-
-        // append date and time to data source
-        $wrapper->appendChild($datetime);
-
+		// generate XML
+		foreach ($transformed as $index => $entry) {
+			$this->addFormattedDateTime($datetime, $index, $entry);
+		}
+		// append date and time to data source
+		$wrapper->appendChild($datetime);
     }
 
     /**
