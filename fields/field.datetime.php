@@ -250,7 +250,7 @@ Class fieldDatetime extends Field {
 	 * @param array $data
 	 *	the data to clean
 	 */
-	protected function ensureArrayValues(&$data) {
+	protected function ensureArrayValues($data) {
 		if($data == null) {
 			return;
 		}
@@ -351,9 +351,7 @@ Class fieldDatetime extends Field {
 		do {
 			$label = $this->addPublishLabel($wrapper, $data, $count);
 			$this->addPublishStart($label, $data, $count);
-			$label = $this->addPublishLabel($wrapper, $data, $count);
 			$this->addPublishEnd($label, $data, $count);
-			$label = $this->addPublishLabel($wrapper, $data, $count);
 			$this->addPublishSettings($label, $count);
 		} while($data != null && $count++ < count($data['start']));
 		$this->addPublishNewLink($wrapper);
